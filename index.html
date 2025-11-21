@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chicken Egg Shooter - 3D Open World Game</title>
+    <style>
+        :root {
+            --color-white: rgba(255, 255, 255, 1);
+            --color-black: rgba(0, 0, 0, 1);
+            --color-cream-50: rgba(252, 252, 249, 1);
+            --color-teal-500: rgba(33, 128, 141, 1);
+            --color-teal-600: rgba(29, 116, 128, 1);
+            --color-primary: var(--color-teal-500);
+            --color-primary-hover: var(--color-teal-600);
+            --font-family-base: "FKGroteskNeue", "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --space-8: 8px;
+            --space-16: 16px;
+            --space-24: 24px;
+            --radius-base: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-base);
+            overflow: hidden;
+            background: #000;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* Tutorial Overlay */
+        #tutorialOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #tutorialContent {
+            background: #fff;
+            padding: var(--space-24);
+            border-radius: var(--radius-base);
+            max-width: 600px;
+            width: 90%;
+            max-height: 70vh;
+            overflow-y: auto;
+            color: #000;
+        }
+
+        #tutorialContent h1 {
+            color: #000;
+            margin-bottom: var(--space-16);
+            font-size: 28px;
+        }
+
+        #tutorialContent h2 {
+            color: #000;
+            margin-top: var(--space-16);
+            margin-bottom: var(--space-8);
+            font-size: 20px;
+        }
+
+        #tutorialContent p, #tutorialContent ul {
+            margin-bottom: var(--space-16);
+            line-height: 1.6;
+        }
+
+        #tutorialContent ul {
+            padding-left: 20px;
+        }
+
+        #tutorialContent li {
+            margin-bottom: var(--space-8);
+        }
+
+        #startButton {
+            width: 100%;
+            padding: var(--space-16);
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-base);
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: var(--space-16);
+            font-family: var(--font-family-base);
+        }
+
+        #startButton:hover {
+            background: var(--color-primary-hover);
+        }
+
+        /* HUD */
+        #hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        #stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 14px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: auto;
+        }
+
+        .stat-bar {
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .bar-container {
+            width: 200px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .health-bar {
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+        }
+
+        .energy-bar {
+            background: linear-gradient(90deg, #FFC107, #FFD54F);
+        }
+
+        #levelInfo {
+            margin-top: 10px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Hotbar */
+        #hotbar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .hotbar-slot {
+            width: 60px;
+            height: 60px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            position: relative;
+        }
+
+        .hotbar-slot.active {
+            border-color: #4CAF50;
+            background: rgba(76,175,80,0.3);
+        }
+
+        .hotbar-slot.locked {
+            opacity: 0.5;
+        }
+
+        .slot-number {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .slot-icon {
+            font-size: 24px;
+        }
+
+        .slot-name {
+            font-size: 8px;
+            text-align: center;
+            margin-top: 2px;
+        }
+
+        /* Touch Controls */
+        #touchControls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;
+            pointer-events: none;
+            z-index: 99;
+            display: none;
+        }
+
+        @media (max-width: 768px), (pointer: coarse) {
+            #touchControls {
+                display: block;
+            }
+        }
+
+        #joystick {
+            position: absolute;
+            bottom: 100px;
+            left: 50px;
+            width: 120px;
+            height: 120px;
+            pointer-events: auto;
+        }
+
+        .joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.3);
+            border: 3px solid rgba(255,255,255,0.6);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .joystick-stick {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.7);
+            border: 3px solid rgba(255,255,255,0.9);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            transition: box-shadow 0.1s ease;
+        }
+
+        .joystick-stick.active {
+            box-shadow: 0 4px 12px rgba(255,255,255,0.5);
+        }
+
+        #shootButton {
+            position: absolute;
+            bottom: 100px;
+            right: 50px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255,100,100,0.6);
+            border: 3px solid rgba(255,255,255,0.8);
+            border-radius: 50%;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #viewToggle {
+            position: absolute;
+            bottom: 200px;
+            right: 50px;
+            width: 60px;
+            height: 60px;
+            background: rgba(100,100,255,0.6);
+            border: 3px solid rgba(255,255,255,0.8);
+            border-radius: 50%;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        #touchLookZone {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+        }
+
+        @media (max-width: 768px), (pointer: coarse) {
+            #touchLookZone::before {
+                content: 'Look';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: rgba(255, 255, 255, 0.3);
+                font-size: 18px;
+                font-weight: 600;
+                pointer-events: none;
+            }
+        }
+
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        #clickInstruction {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: var(--space-24);
+            border-radius: var(--radius-base);
+            font-size: 20px;
+            font-weight: 600;
+            z-index: 200;
+            text-align: center;
+            pointer-events: none;
+            display: none;
+        }
+
+        .crosshair-line {
+            position: absolute;
+            background: rgba(255,255,255,0.8);
+        }
+
+        .crosshair-line.h {
+            width: 20px;
+            height: 2px;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+
+        .crosshair-line.v {
+            width: 2px;
+            height: 20px;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+    <!-- Tutorial Overlay -->
+    <div id="tutorialOverlay">
+        <div id="tutorialContent">
+            <h1>🐔 Chicken Egg Shooter</h1>
+            <p>Welcome to the open world chicken egg shooter game! You play as a brave chicken defending yourself by throwing eggs at people while avoiding evil döner kebab chefs.</p>
+            
+            <h2>📖 Story</h2>
+            <p>Random people walk around the world, and it's your job to hit them with eggs to earn Experience Points (EP). But beware! Evil döner kebab chefs in red uniforms will chase you and try to attack you!</p>
+            
+            <h2>🎮 Controls</h2>
+            <ul>
+                <li><strong>WASD or Arrow Keys:</strong> Move around</li>
+                <li><strong>Mouse:</strong> Look around</li>
+                <li><strong>Click or Space:</strong> Throw eggs</li>
+                <li><strong>1-9:</strong> Select weapon from hotbar</li>
+                <li><strong>V:</strong> Toggle first/third person view</li>
+                <li><strong>ESC:</strong> Release mouse pointer</li>
+            </ul>
+            
+            <h2>⚡ Stats</h2>
+            <ul>
+                <li><strong>Health:</strong> 100 HP (increases by 25 each level)</li>
+                <li><strong>Energy:</strong> 200 (drains 10 per minute while moving)</li>
+                <li>Energy ONLY refills at the döner kebab shop!</li>
+                <li>If energy reaches 0, you lose 5 HP per second!</li>
+            </ul>
+            
+            <h2>🔫 Weapons</h2>
+            <ul>
+                <li><strong>Level 1 (0 EP):</strong> Hand - throw 1 egg per click</li>
+                <li><strong>Level 2 (100 EP):</strong> Cardboard Launcher - auto shoots 1 egg/0.5s</li>
+                <li><strong>Level 3 (500 EP):</strong> Plastic Launcher - auto shoots 2 eggs/0.3s</li>
+                <li><strong>Level 4 (3000 EP):</strong> Metal Launcher - auto shoots 5 eggs/0.1s</li>
+                <li><strong>Level 6 (10000 EP):</strong> Egg RPG - shoots 200 eggs at once</li>
+                <li><strong>Level 7 (60000 EP):</strong> Egg Nuke - shoots 1000 eggs at once</li>
+            </ul>
+            
+            <h2>🎯 Gameplay Tips</h2>
+            <ul>
+                <li>Hit white people with eggs to earn +1 EP per hit</li>
+                <li>People run away for 5 seconds after being hit</li>
+                <li>Hit chefs with 4 eggs to defeat them for +3 EP each</li>
+                <li>Defeated chefs respawn after 10 seconds</li>
+                <li>Each level up spawns 1 additional chef and gives +25 HP</li>
+                <li>Go to döner shop to refill energy (200 + 500 bonus)</li>
+                <li>Watch your energy - if it hits 0, you lose HP fast!</li>
+            </ul>
+            
+            <button id="startButton">START GAME (or press ENTER)</button>
+        </div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div id="stats">
+            <div class="stat-bar">
+                <div class="stat-label">Health: <span id="healthText">100</span>/100</div>
+                <div class="bar-container">
+                    <div class="bar-fill health-bar" id="healthBar" style="width: 100%"></div>
+                </div>
+            </div>
+            <div class="stat-bar">
+                <div class="stat-label">Energy: <span id="energyText">200</span>/200</div>
+                <div class="bar-container">
+                    <div class="bar-fill energy-bar" id="energyBar" style="width: 100%"></div>
+                </div>
+            </div>
+            <div id="levelInfo">
+                Level <span id="levelText">1</span> | EP: <span id="epText">0</span>
+            </div>
+            <div style="margin-top: 10px; font-size: 14px;">
+                Weapon: <span id="weaponName">Hand</span>
+            </div>
+        </div>
+
+        <div id="hotbar"></div>
+
+        <div id="crosshair">
+            <div class="crosshair-line h"></div>
+            <div class="crosshair-line v"></div>
+        </div>
+    </div>
+
+    <!-- Click Instruction -->
+    <div id="clickInstruction">
+        Click to start and look around
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameOverOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1000; display: none; justify-content: center; align-items: center;">
+        <div style="background: #fff; padding: 40px; border-radius: 12px; text-align: center; max-width: 500px;">
+            <h1 style="color: #CC0000; font-size: 48px; margin-bottom: 20px;">GAME OVER</h1>
+            <p id="deathReason" style="color: #000; font-size: 20px; margin-bottom: 30px;"></p>
+            <button id="restartButton" style="width: 100%; padding: 16px; background: var(--color-primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; font-family: var(--font-family-base);">RESTART GAME</button>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.8); color: white; padding: 30px 40px; border-radius: 12px; font-size: 20px; z-index: 999; text-align: center;">
+        <div style="margin-bottom: 15px;">Loading 3D Models...</div>
+        <div id="loadingProgress" style="font-size: 16px; opacity: 0.8;">0%</div>
+    </div>
+
+    <!-- Touch Controls -->
+    <div id="touchControls">
+        <div id="joystick">
+            <div class="joystick-base">
+                <div class="joystick-stick"></div>
+            </div>
+        </div>
+        <div id="touchLookZone"></div>
+        <div id="shootButton">SHOOT</div>
+        <div id="viewToggle">VIEW</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.159.0/examples/jsm/"
+        }
+    }
+    </script>
+    <script type="module" src="game.js"></script>
+</body>
+</html>
